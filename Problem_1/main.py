@@ -3,14 +3,15 @@ import os
 import sys
 
 # class to hold all all information required about a .cnf file
-class cnf(object):
+class cnf_t(object):
 	def __init__(self,filename):
 		self.filename = filename
+		self.clauses = []
+		self.num_vars = -1
 		self.read_file()
 
 	# parses a single .cnf file
 	def read_file(self):
-		#print("Reading "+str(filename)+"...")
 
 		f = open(self.filename,"r")
 		text = f.read()
@@ -23,7 +24,13 @@ class cnf(object):
 		for line in lines:
 			if line[0]=="%": break # denotes the eof
 
-			if line[0]!="c" and line[0]!="p": # skip all comment lines
+			if line[0]=="p": # get the header data
+				elems = line.split(" ")
+				if elems[-1]!="": self.num_vars = int(elems[-1])
+				else: self.num_vars = int(elems[-2])
+				continue
+
+			if line[0]!="c": # skip all comment lines
 				elems = line.split(" ") # split line on spaces
 				for elem in elems: # iterate over each element
 
@@ -39,10 +46,9 @@ class cnf(object):
 
 					else: # if this is an empty elem, negate the next
 						negated = True
-		#print("Parsed "+str(len(self.clauses)+" from "+filename)
 
 # class to handle loading/accessing of .cnf data
-class data(object):
+class data_t(object):
 
 	def __init__(self):
 		self.var_20 = [] # to hold all .cnf with 20 variables
@@ -70,7 +76,7 @@ class data(object):
 
 				if f.find(".cnf")!=-1:
 					filename = path+f 
-					cur = cnf(filename)
+					cur = cnf_t(filename)
 
 					if d == "20/": self.var_20.append(cur)
 					if d == "50/": self.var_50.append(cur)
@@ -84,9 +90,24 @@ class data(object):
 		print("75 Variable Equations: "+str(len(self.var_75)))
 		print("100 Variable Equations: "+str(len(self.var_100)))
 
+
+def train(data,num_vars):
+	pop = init_population(num_vars)
+
+
+
 def main():
-	d = data()
+	d = data_t() # load data from all .cnf files
+
 
 
 if __name__ == '__main__':
 	main()
+
+
+
+
+
+
+
+

@@ -45,13 +45,16 @@ class cnf_t(object):
 # class to handle loading/accessing of .cnf data
 class data_t(object):
 
-	def __init__(self):
+	# num_equations is the maximum number of .cnf files to parse per var ct level
+	def __init__(self,num_equations=100):
+		self.num_equations = num_equations # max num .cnf files per var level
+
 		self.var_20 = [] # to hold all .cnf with 20 variables
 		self.var_50 = [] # to hold all .cnf with 50 variables
 		self.var_75 = [] # to hold all .cnf with 75 variables
 		self.var_100 = [] # to hold all .cnf with 100 variables
 
-		self.load_data() # load in all .cnf files
+		self.load_data() # load in up to num_equations .cnf files per var count level
 
 	def load_data(self):
 		print("Loading data...")
@@ -59,26 +62,28 @@ class data_t(object):
 		parent_dir = "data/"
 		child_dirs = ["20/","50/","75/","100/"]
 
-		num_read = 0
+		num_read_total = 0
 
 		for d in child_dirs: # iterate over all data directories
+
+			if d == "20/": cur_type = "var_20"
+			if d == "50/": cur_type = "var_50"
+			if d == "75/": cur_type = "var_75"
+			if d == "100/": cur_type = "var_100"
 
 			path = parent_dir+d
 			items = os.listdir(path)
 
 			for f in items:
-				print("Reading... "+str(num_read),end="\r")
+				print("Reading... "+str(num_read_total),end="\r")
 
 				if f.find(".cnf")!=-1:
 					filename = path+f 
 					cur = cnf_t(filename)
-
-					if d == "20/": self.var_20.append(cur)
-					if d == "50/": self.var_50.append(cur)
-					if d == "75/": self.var_75.append(cur)
-					if d == "100/": self.var_100.append(cur)
-
-					num_read+=1
+					self.__dict__[cur_type].append(cur) # add to appropriate member item
+					num_read_total+=1
+					
+					if len(self.__dict__[cur_type])>=self.num_equations: break
 
 		print("20 Variable Equations: "+str(len(self.var_20)))
 		print("50 Variable Equations: "+str(len(self.var_50)))

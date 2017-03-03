@@ -6,13 +6,13 @@ import sys
 class cnf_t(object):
 	def __init__(self,filename):
 		self.filename = filename
-		self.clauses = []
-		self.num_vars = -1
-		self.read_file()
+		self.clauses = [] # list of integer lists (1 per clause)
+		self.num_vars = -1 # number of variables in equation
+		self.num_clauses = -1 # number of clauses in equation
+		self.read_file() # load .cnf file
 
 	# parses a single .cnf file
 	def read_file(self):
-
 		f = open(self.filename,"r")
 		text = f.read()
 		lines = text.split("\n")
@@ -22,25 +22,29 @@ class cnf_t(object):
 
 		for line in lines:
 			if line[0]=="%": break # denotes the eof
-
 			if line[0]=="p": # get the header data
 				elems = line.split(" ")
-				if elems[-1]!="": self.num_vars = int(elems[-1])
-				else: self.num_vars = int(elems[-2])
+				self.num_vars = int(elems[2]) # save the number of variables in equation
 				continue
-
 			if line[0]!="c": # skip all comment lines
 				elems = line.split(" ") # split line on spaces
 				for elem in elems: # iterate over each element
-
 					if elem=="0":
 						self.clauses.append(current_clause) # append the full clause
 						current_clause = [] # empty the read buffer
 						continue
-
 					if elem!="": # if there is a clause element
 						val = int(elem)
 						current_clause.append(val) # add to current read buffer
+		self.num_clauses = len(self.clauses) # save the number of clauses read
+
+	# prints out a representation of the .cnf file to terminal
+	def print_cnf(self):
+		print("-------------------------------------------")
+		print("Filename: "+self.filename+", Clauses: "+str(self.num_clauses)+", Variables: "+str(self.num_vars))
+		for c in self.clauses:
+			print(c)
+		print("-------------------------------------------")
 
 # class to handle loading/accessing of .cnf data
 class data_t(object):
@@ -49,10 +53,10 @@ class data_t(object):
 	def __init__(self,num_equations=100):
 		self.num_equations = num_equations # max num .cnf files per var level
 
-		self.var_20 = [] # to hold all .cnf with 20 variables
-		self.var_50 = [] # to hold all .cnf with 50 variables
-		self.var_75 = [] # to hold all .cnf with 75 variables
-		self.var_100 = [] # to hold all .cnf with 100 variables
+		self.var_20 = [] # to hold all .cnf with 20 var
+		self.var_50 = [] # to hold all .cnf with 50 var
+		self.var_75 = [] # to hold all .cnf with 75 var
+		self.var_100 = [] # to hold all .cnf with 100 var
 
 		self.load_data() # load in up to num_equations .cnf files per var count level
 
@@ -62,7 +66,7 @@ class data_t(object):
 		parent_dir = "data/"
 		child_dirs = ["20/","50/","75/","100/"]
 
-		num_read_total = 0
+		num_read_total = 0 # total number of .cnf files read
 
 		for d in child_dirs: # iterate over all data directories
 

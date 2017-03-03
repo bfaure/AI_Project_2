@@ -1,6 +1,7 @@
 from __future__ import print_function # to allow for \r
 import os
 import sys
+import random
 
 # class to hold all all information required about a .cnf file
 class cnf_t(object):
@@ -61,15 +62,18 @@ class data_t(object):
 		self.load_data() # load in up to num_equations .cnf files per var count level
 
 	def load_data(self):
-		print("Loading data...")
-
+		
 		parent_dir = "data/"
 		child_dirs = ["20/","50/","75/","100/"]
-
 		num_read_total = 0 # total number of .cnf files read
+		max_to_read = self.num_equations*4
+
+		progress_bar_length = 25
+		progress_bar_item = "-"
+		progress_bar_empty_item = " "
+		print("\n",end="\r")
 
 		for d in child_dirs: # iterate over all data directories
-
 			if d == "20/": cur_type = "var_20"
 			if d == "50/": cur_type = "var_50"
 			if d == "75/": cur_type = "var_75"
@@ -79,29 +83,52 @@ class data_t(object):
 			items = os.listdir(path)
 
 			for f in items:
-				print("Reading... "+str(num_read_total),end="\r")
+
+				progress = int (float(num_read_total) / float(max_to_read) * progress_bar_length)
+				progress_string = "["
+				for prog_index in range(progress_bar_length):
+					if prog_index <= progress: progress_string += progress_bar_item
+					else: progress_string += progress_bar_empty_item
+				progress_string += "]"
+				print("Loading .cnf files... "+progress_string,end="\r")
 
 				if f.find(".cnf")!=-1:
 					filename = path+f 
 					cur = cnf_t(filename)
 					self.__dict__[cur_type].append(cur) # add to appropriate member item
 					num_read_total+=1
-					
 					if len(self.__dict__[cur_type])>=self.num_equations: break
+		print("\n",end="\r")
 
-		print("20 Variable Equations: "+str(len(self.var_20)))
-		print("50 Variable Equations: "+str(len(self.var_50)))
-		print("75 Variable Equations: "+str(len(self.var_75)))
-		print("100 Variable Equations: "+str(len(self.var_100)))
+def init_population(variable_count,population_size):
+	population = [] # will be filled with initialized population members
+	for _ in range(population_size):
+		print("Initializing var "+str(variable_count)+" population... "+str(len(population)+1),end="\r")
+		individual = [] # to hold a single individual
+		for _ in range(variable_count):
+			# choose 0 or 1 randomly
+			individual.append(random.uniform(0,1))
+		# add individual to population
+		population.append(individual) 
+	print("\n",end="\r")
+	return population
+
+# Takes in a list of cnf_t objects (all must have the same number of variables)
+def train(data):
+	num_vars 		= data[0].num_vars 
+	num_clauses 	= data[0].num_clauses 
+	population_size = 10
+
+	# get population_size randomized solutions of length num_vars
+	pop = init_population(num_vars,population_size)
 
 
-def train(data,num_vars):
-	pop = init_population(num_vars)
 
 
 
 def main():
 	d = data_t() # load data from all .cnf files
+	train(d.var_20) # train on the 20 variable equations
 
 
 

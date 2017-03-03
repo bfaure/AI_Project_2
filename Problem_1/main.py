@@ -19,7 +19,6 @@ class cnf_t(object):
 
 		self.clauses = [] # each element is a single clause (list of integers)
 		current_clause = [] # buffer to hold current clause being parsed
-		negated = False # set to True if we encounter an empty elem
 
 		for line in lines:
 			if line[0]=="%": break # denotes the eof
@@ -40,12 +39,8 @@ class cnf_t(object):
 						continue
 
 					if elem!="": # if there is a clause element
-						val = int(elem) if not negated else int(elem)*-1
+						val = int(elem)
 						current_clause.append(val) # add to current read buffer
-						negated = False
-
-					else: # if this is an empty elem, negate the next
-						negated = True
 
 # class to handle loading/accessing of .cnf data
 class data_t(object):

@@ -100,6 +100,7 @@ class data_t(object):
 					if len(self.__dict__[cur_type])>=self.num_equations: break
 		print("\n",end="\r")
 
+# creates 'population_size' 'variable_count' ramdomized inviduals
 def init_population(variable_count,population_size):
 	population = [] # will be filled with initialized population members
 	for _ in range(population_size):
@@ -107,23 +108,88 @@ def init_population(variable_count,population_size):
 		individual = [] # to hold a single individual
 		for _ in range(variable_count):
 			# choose 0 or 1 randomly
-			individual.append(random.uniform(0,1))
+			if bool(random.getrandbits(1))==True: individual.append(1)
+			else: individual.append(0)
 		# add individual to population
 		population.append(individual) 
 	print("\n",end="\r")
 	return population
 
+# checks if the individual suceeds in a single clause, returns True if so, False o.w.
+# To check for success we will iterate over each item in the clause (which will be an
+# integer item) and check if this item relates to a positive value in the individual,
+# for example, if the clause input was [1,-2,3] and the individual was [1,1,1] then we
+# would evaluate the output of 1 AND 0 AND 1 (outputs False)
+def test_individual_on_clause(individual,clause):
+	for item in clause:
+		if item>0:
+			result = individual[item-1]
+			if result==0: return False
+		else:
+			result = individual[-1*item-1]
+			if result==1: return False
+	return True
+
+# evaluates the fitness of 'individual' on all cnf_t instances in 'environments' list
+def evaluate_fitness(individual,environments):
+	overall_fitness = 0
+	for e in environments: # iterate over all cnt_f environments
+		# iterate over all clauses in cnf_t environment
+		for clause in e.clauses:
+			if test_individual_on_clause(individual,clause):
+				overall_fitness+=1
+	return overall_fitness
+
 # Takes in a list of cnf_t objects (all must have the same number of variables)
-def train(data):
-	num_vars 		= data[0].num_vars 
-	num_clauses 	= data[0].num_clauses 
+def train(environments):
+	print("Training...")
+
+	num_vars 		= environments[0].num_vars 
+	num_clauses 	= environments[0].num_clauses 
 	population_size = 10
+
+	perfect_fitness = num_clauses * len(environments)
+	print("Perfect fitness: "+str(perfect_fitness))
+
+	best_fitness = -1 # to hold the best fitness found on each generation
 
 	# get population_size randomized solutions of length num_vars
 	pop = init_population(num_vars,population_size)
 
+	generation = 0 # current generation number
 
+	while best_fitness<perfect_fitness:
 
+		elite 		= [] # to hold to 2 best individuals
+		fitnesses 	= [] # to hold the evaluated fitness for each individual
+
+		highest_fitness 					= -1
+		highest_fitness_individual_index 	= -1
+
+		second_highest_fitness 					= -1
+		second_highest_fitness_individual_index = -1
+
+		for individual in pop: # evaluate fitness for each individual
+			fitness = evaluate_fitness(individual,environments)
+
+			if fitness > highest_fitness:
+				highest_fitness = fitness 
+				highest_fitness_individual_index = pop.index(individual)
+				continue
+
+			if fitness > second_highest_fitness:
+				second_highest_fitness = fitness 
+				highest_fitness_individual_index = pop.index(individual)
+				continue
+
+		print("Generation "+str(generation)+": Best Fitness = "+str(highest_fitness),end="\r")
+		best_fitness = highest_fitness
+		generation+=1
+
+		if generation>10:
+			break
+
+	print("\n",end="\r")
 
 
 def main():

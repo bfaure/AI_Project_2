@@ -5,6 +5,8 @@ import random
 import bisect
 from copy import copy
 
+log = open("debug.log","w")
+
 # class to hold all all information required about a .cnf file
 class cnf_t(object):
 	def __init__(self,filename):
@@ -104,6 +106,8 @@ class data_t(object):
 
 # creates 'population_size' 'variable_count' ramdomized inviduals
 def init_population(variable_count,population_size):
+	log.write("Initializing population\n")
+	
 	population = [] # will be filled with initialized population members
 	for _ in range(population_size):
 		print("Initializing var "+str(variable_count)+" population... "+str(len(population)+1),end="\r")

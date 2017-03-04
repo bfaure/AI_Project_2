@@ -4,8 +4,9 @@ import sys
 import random
 import bisect
 from copy import copy
+from time import time
 
-log = open("debug.log","w")
+#log = open("debug.log","w")
 
 # class to hold all all information required about a .cnf file
 class cnf_t(object):
@@ -106,11 +107,11 @@ class data_t(object):
 
 # creates 'population_size' 'variable_count' ramdomized inviduals
 def init_population(variable_count,population_size):
-	log.write("Initializing population\n")
+	#log.write("Initializing population\n")
 	
 	population = [] # will be filled with initialized population members
 	for _ in range(population_size):
-		print("Initializing var "+str(variable_count)+" population... "+str(len(population)+1),end="\r")
+		#print("Initializing var "+str(variable_count)+" population... "+str(len(population)+1),end="\r")
 		individual = [] # to hold a single individual
 		for _ in range(variable_count):
 			# choose 0 or 1 randomly
@@ -118,7 +119,7 @@ def init_population(variable_count,population_size):
 			else: individual.append(0)
 		# add individual to population
 		population.append(individual) 
-	print("\n",end="\r")
+	#print("\n",end="\r")
 	return population
 
 # checks if the individual suceeds in a single clause, returns True if so, False o.w.
@@ -178,7 +179,8 @@ def choose_parent(fitnesses):
 
 # applies the flip heuristic
 def flip_heuristic(child,environment):
-	
+	bit_flips = 0
+
 	while True:
 
 		initial_fitness = evaluate_fitness(child,environment)
@@ -204,45 +206,64 @@ def flip_heuristic(child,environment):
 			scanned[bit] = True 
 
 			current_fitness = evaluate_fitness(child,environment) # evaluate fitness before bit flip
-			if child[bit]==1: child[bit]=0
-			else: child[bit]=1
+			child[bit]=0 if child[bit]==1 else 1
+			bit_flips += 1
 			new_fitness = evaluate_fitness(child,environment) # evaluate new fitness
 			
 			# if this has not increased our fitness, re-flip back to original
-			if new_fitness<current_fitness: child[bit] = 0 if child[bit]==1 else 1
+			if new_fitness<current_fitness: 
+				child[bit] = 0 if child[bit]==1 else 1
+				bit_flips += 1
 
 		# check if this round of flip_heuristic has increased the fitness of the child
-		if evaluate_fitness(child,environment) > initial_fitness: continue
-
+		if evaluate_fitness(child,environment) > initial_fitness: 
+			continue
+		
 		# if we get here then this round has not increased the fitness of the child
 		# so we should return the current state of the child
-		return orig_child
+		else:
+			return orig_child,bit_flips
 
-def normalize_fitnesses(fitnesses):
-	total_fitness = float(sum(fitnesses))
-	new_fitnesses = [float(e)/total_fitness for e in fitnesses]
-	return new_fitnesses
-
+# applies the mutation to a single individual, returns mutated version
 def mutate(individual):
+	
 	new_individual = []
+	bit_flips = 0
+
 	for item in individual:
 		if bool(random.getrandbits(1))==True: # flip the bit
+			bit_flips+=1
+			
 			if item==0: new_individual.append(1)
 			else: new_individual.append(0)
+		
 		else:
 			new_individual.append(item)
-	return new_individual
 
+	return new_individual,bit_flips
+
+# Returns the child of parents p1 and p2
 def get_child(p1,p2,environment):
-	child = []
+	
+	child = [] 
+	bit_flips = 0
+	
 	for p1_trait,p2_trait in zip(p1,p2):
 		if bool(random.getrandbits(1))==True: child.append(p1_trait)
 		else: child.append(p2_trait)
+	
 	# mutation stage
 	should_mutate = random.randint(1,10)
-	if should_mutate!=10: child = mutate(child)
-	return flip_heuristic(child,environment)
+	if should_mutate!=10: 
+		child,flips = mutate(child)
+		bit_flips+=flips
+	
+	child,flips = flip_heuristic(child,environment)
+	bit_flips+=flips
 
+	return child,bit_flips
+
+# Scans the fitnesses list for the two best items, returns their indices
 def get_two_best_individuals(fitnesses):
 	# calculate the two best individuals
 	best_value = -1
@@ -270,6 +291,9 @@ def get_next_generation(population,fitnesses,environment):
 	new_population.append(population[best])
 	new_population.append(population[runner_up])
 
+	# number of bit flips performed
+	bit_flips = 0
+
 	while len(new_population)<len(population):
 
 		# probabilistic selection
@@ -277,66 +301,92 @@ def get_next_generation(population,fitnesses,environment):
 		p2 = population[choose_parent(fitnesses)]
 
 		# Uniform crossover reproduction, mutation, and flip heuristic
-		child = get_child(p1,p2,environment)
+		child,flips = get_child(p1,p2,environment)
+
+		# add bit flips
+		bit_flips+=flips
 
 		# add new child to new population
 		new_population.append(child)
 
-	return new_population
+	return new_population,bit_flips
 
-# Takes in a list of cnf_t objects (all must have the same number of variables)
-def train(environments):
-	MAX_GENERATIONS = 100000
+# puts the header information in a data log file
+def init_data_log(file):
+	file.write("File        Generations        Bit Flips          Time\n")
+	file.write("______________________________________________________\n\n")
 
-	for current_environment in environments:
-		print("Fitting to "+current_environment.filename+"...")
+# logs the results after the population has suceeded in solving a .cnf file
+def log_data(file,cur_cnf,generation,bit_flips,time):
+	file.write(str(cur_cnf)+"\t"+str(generation)+"\t"+str(bit_flips)+"\t"+str(time)+"\n")
 
-		num_vars 		= current_environment.num_vars 
-		num_clauses 	= current_environment.num_clauses 
-		population_size = 10
+# Takes in a data_t object and splits training into the different variable count .cnf files
+def train(data):
+	var_types 		= ["var_20","var_50","var_75","var_100"]
+	population_size = 10 # number of individuals
 
-		perfect_fitness = num_clauses
-		print("Perfect fitness: "+str(perfect_fitness))
+	for var_ct in var_types:
 
-		best_fitness = -1 # to hold the best fitness found on each generation
+		data_log 	 	= open(var_ct+".txt","w")
+		environments 	= data.__dict__[var_ct] # all environments w/ same var count
+		perfect_fitness = environments[0].num_clauses # perfect fitness for this environment set
+		num_vars 		= environments[0].num_vars # number of vars in this environment set
+	
+		init_data_log(data_log) # add header to data log file	
 
-		# get population_size randomized solutions of length num_vars
-		pop = init_population(num_vars,population_size)
+		for current_environment in environments:
 
-		generation = 0 # current generation number
+			# create progress bar string
+			progress_bar_length = 10
+			progress_bar_item = "-"
+			progress_bar_empty_item = " "
+			progress = int (float(environments.index(current_environment)) / float(len(environments)) * progress_bar_length)
+			progress_string = "["
+			for prog_index in range(progress_bar_length):
+				if prog_index <= progress: progress_string += progress_bar_item
+				else: progress_string += progress_bar_empty_item
+			progress_string += "]"
 
-		while best_fitness<perfect_fitness:
-			fitnesses 	= [] # to hold the evaluated fitness for each individual
+			cur_file 		= current_environment.filename.split("/")[2]
+			best_fitness 	= -1 # to hold the best fitness found over all generations
+			pop 			= init_population(num_vars,population_size) # initialize population
+			generation 		= 0 # current generation number
+			bit_flips 		= 0 # number of bit flips performed
+			start_time		= time() # get start time of algorithm
 
-			highest_fitness = -1
+			# train population on current file
+			while best_fitness<perfect_fitness:
 
-			for individual in pop: # evaluate fitness for each individual
-				fitness = evaluate_fitness(individual,current_environment)
-				fitnesses.append(fitness)
-				if fitness > highest_fitness: highest_fitness = fitness
+				fitnesses 		= [] # to hold the evaluated fitness for each individual
+				highest_fitness = -1 # to hold the highest fitness of this generation
 
-			if highest_fitness>best_fitness: best_fitness = highest_fitness
+				for individual in pop: # evaluate fitness for each individual
+					fitness = evaluate_fitness(individual,current_environment) # get fitness of individual
+					fitnesses.append(fitness) # add to list of fitnesses
+					if fitness > highest_fitness:
+						highest_fitness = fitness # set max if applicable
 
-			average_fitness = sum(fitnesses) / len(fitnesses)
+				if highest_fitness>best_fitness: # save this as the best if higher than prev. best
+					best_fitness = highest_fitness
 
-			print("gen "+str(generation)+", highest = "+str(highest_fitness)+", avg = "+str(average_fitness)+", overall best = "+str(best_fitness),end="\r")
-			sys.stdout.flush()
+				if environments.index(current_environment) % 3 == 0: print("                                                                          ",end="\r")
+				print(progress_string+" Generation = "+str(generation)+", Best Fitness = "+str(best_fitness)+", Perfect Fitness = "+str(perfect_fitness)+", Bit Flips = "+str(bit_flips),end="\r")
+				sys.stdout.flush()
 
-			if best_fitness==perfect_fitness: break
+				if best_fitness==perfect_fitness: # if we have finished this .cnf file
+					log_data(data_log,cur_file,generation,bit_flips,time()-start_time) # log results to file
+					break
 
-			pop = get_next_generation(pop,fitnesses,current_environment)
+				pop,flips = get_next_generation(pop,fitnesses,current_environment)
+				bit_flips+=flips
+				generation+=1
 
-			generation+=1
-			if generation>MAX_GENERATIONS: break
-
+		data_log.close() # close the logging file
 		print("\n",end="\r")
-
 
 def main():
 	d = data_t() # load data from all .cnf files
-	train(d.var_20) # train on the 20 variable equations
-
-
+	train(d) # train on the 20 variable equations
 
 if __name__ == '__main__':
 	main()

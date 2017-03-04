@@ -135,15 +135,15 @@ def test_individual_on_clause(individual,clause):
 		var_index = abs(item)-1 # index of the variable in the individual
 		result = individual[var_index] # get the item at said index
 		if item>0: # if not negated, need a 0 to prove False
-			if result==0: 
-				#log.write("FAILURE\n")
-				return False
-		else: # if negated, need a 1 to prove False
 			if result==1: 
 				#log.write("FAILURE\n")
-				return False
+				return True
+		else: # if negated, need a 1 to prove False
+			if result==0: 
+				#log.write("FAILURE\n")
+				return True
 	#log.write("SUCCESS\n")
-	return True # True if never proven False
+	return False # True if never proven False
 
 # evaluates the fitness of 'individual' on all cnf_t instances in 'environments' list
 def evaluate_fitness(individual,environment):

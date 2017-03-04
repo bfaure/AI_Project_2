@@ -127,21 +127,27 @@ def init_population(variable_count,population_size):
 # for example, if the clause input was [1,-2,3] and the individual was [1,1,1] then we
 # would evaluate the output of 1 AND 0 AND 1 (outputs False)
 def test_individual_on_clause(individual,clause):
+	#individual_str = ''.join(str(e) for e in individual)
+	#clause_str = ''.join(str(e)+" " for e in clause)
+	#log.write("Testing "+individual_str+" on clause "+clause_str+"\n")
+
 	for item in clause:
-		if item>0:
-			# if the variable index is >0
-			var_index = item-1
-			result = individual[var_index]
-			if result==0: return False
-		else:
-			# if the variable index is <0
-			var_index = (item*-1)-1
-			result = individual[var_index]
-			if result==1: return False
-	return True
+		var_index = abs(item)-1 # index of the variable in the individual
+		result = individual[var_index] # get the item at said index
+		if item>0: # if not negated, need a 0 to prove False
+			if result==0: 
+				#log.write("FAILURE\n")
+				return False
+		else: # if negated, need a 1 to prove False
+			if result==1: 
+				#log.write("FAILURE\n")
+				return False
+	#log.write("SUCCESS\n")
+	return True # True if never proven False
 
 # evaluates the fitness of 'individual' on all cnf_t instances in 'environments' list
 def evaluate_fitness(individual,environment):
+
 	overall_fitness = 0
 	# iterate over all clauses in cnf_t environment
 	for clause in environment.clauses:
@@ -151,6 +157,8 @@ def evaluate_fitness(individual,environment):
 # choose a parent from the list of individuals based on the probabilities transferred over
 # from the list of fitnesses, using cumulative distribution function (cdf)
 def choose_parent(fitnesses):
+	#fitnesses_str = ''.join(str(e)+" " for e in fitnesses)
+	#log.write("Choosing parent from "+fitnesses_str+"\n")
 
 	def cdf(weights):
 		total = sum(weights)
@@ -164,6 +172,8 @@ def choose_parent(fitnesses):
 	cdf_vals = cdf(fitnesses)
 	x = random.random()
 	idx = bisect.bisect(cdf_vals,x)
+
+	#log.write("Chose index = "+str(idx)+"\n")
 	return idx
 
 # applies the flip heuristic
@@ -173,6 +183,7 @@ def flip_heuristic(child,environment):
 
 		initial_fitness = evaluate_fitness(child,environment)
 		scanned = [False] * len(child)
+		orig_child = copy(child)
 
 		while True:
 			#random.seed() # re-seed the random function
@@ -204,7 +215,32 @@ def flip_heuristic(child,environment):
 
 		# if we get here then this round has not increased the fitness of the child
 		# so we should return the current state of the child
-		return child 
+		return orig_child
+
+def normalize_fitnesses(fitnesses):
+	total_fitness = float(sum(fitnesses))
+	new_fitnesses = [float(e)/total_fitness for e in fitnesses]
+	return new_fitnesses
+
+def mutate(individual):
+	new_individual = []
+	for item in individual:
+		if bool(random.getrandbits(1))==True: # flip the bit
+			if item==0: new_individual.append(1)
+			else: new_individual.append(0)
+		else:
+			new_individual.append(item)
+	return new_individual
+
+def get_child(p1,p2):
+	child = []
+	for p1_trait,p2_trait in zip(p1,p2):
+		if bool(random.getrandbits(1))==True: child.append(p1_trait)
+		else: child.append(p2_trait)
+	# mutation stage
+	should_mutate = random.randint(1,10)
+	if should_mutate!=10: return mutate(child)
+	else: return child
 
 # assembles the next generation based on the results of testing in the prior
 def get_next_generation(individuals,fitnesses,environment):
@@ -232,23 +268,16 @@ def get_next_generation(individuals,fitnesses,environment):
 
 	pop_size = len(individuals)
 
+	fitnesses = normalize_fitnesses(fitnesses)
+
 	while len(new_population)<pop_size:
+
+		# probabilistic selection
 		p1 = individuals[choose_parent(fitnesses)]
 		p2 = individuals[choose_parent(fitnesses)]
 
-		child = [] # new child of p1 and p2
-
-		# reproduction stage
-		for p1_trait,p2_trait in list(zip(p1,p2)):
-			if bool(random.getrandbits(1))==True: child.append(p1_trait)
-			else: child.append(p2_trait)
-
-		# mutation stage
-		for i in range(len(child)):
-			should_mutate = random.randint(1,10)
-			if should_mutate!=10: # 0.9 probability
-				# with 0.5 probability, flip the child trait bit
-				if bool(random.getrandbits(1))==True: child[i] = 0 if child[i]==1 else 1
+		# Uniform crossover reproduction
+		child = get_child(p1,p2)
 
 		# apply the flip heuristic
 		child = flip_heuristic(child,environment)
@@ -260,6 +289,7 @@ def get_next_generation(individuals,fitnesses,environment):
 
 # Takes in a list of cnf_t objects (all must have the same number of variables)
 def train(environments):
+	MAX_GENERATIONS = 100000
 
 	for current_environment in environments:
 		print("Fitting to "+current_environment.filename+"...")
@@ -288,18 +318,18 @@ def train(environments):
 				fitnesses.append(fitness)
 				if fitness > highest_fitness: highest_fitness = fitness
 
-			if highest_fitness>best_fitness:
-				best_fitness = highest_fitness
+			if highest_fitness>best_fitness: best_fitness = highest_fitness
 
-			print("gen "+str(generation)+", highest = "+str(highest_fitness)+", overall best = "+str(best_fitness))
+			average_fitness = sum(fitnesses) / len(fitnesses)
+
+			print("gen "+str(generation)+", highest = "+str(highest_fitness)+", avg = "+str(average_fitness)+", overall best = "+str(best_fitness),end="\r")
 			
 			if best_fitness==perfect_fitness: break
 
 			pop = get_next_generation(pop,fitnesses,current_environment)
 
 			generation+=1
-			if generation>1000:
-				break
+			if generation>MAX_GENERATIONS: break
 
 		print("\n",end="\r")
 

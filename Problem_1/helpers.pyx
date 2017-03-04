@@ -121,10 +121,6 @@ def init_population(variable_count,population_size):
 	return population
 
 # checks if the individual suceeds in a single clause, returns True if so, False o.w.
-# To check for success we will iterate over each item in the clause (which will be an
-# integer item) and check if this item relates to a positive value in the individual,
-# for example, if the clause input was [1,-2,3] and the individual was [1,1,1] then we
-# would evaluate the output of 1 AND 0 AND 1 (outputs False)
 def test_individual_on_clause(individual,clause):
 	for item in clause:
 		if item>0 and individual[abs(item)-1]==1: return True # need a 1 to prove success
@@ -345,7 +341,7 @@ def train(data,var_types,population_size=10,logging=True):
 					best_fitness = highest_fitness
 
 				if environments.index(current_environment) % 4 == 0: print("                                                                          ",end="\r")
-				print(var_ct+": "+progress_string+" Generation = "+str(generation)+", Best Fitness = "+str(best_fitness)+", Perfect Fitness = "+str(perfect_fitness)+", Bit Flips = "+str(bit_flips),end="\r")
+				print(var_ct+": "+progress_string+" Generation = "+str(generation)+", Fitness = "+str(best_fitness)+"/"+str(perfect_fitness)+", Bit Flips = "+str(bit_flips),end="\r")
 				sys.stdout.flush()
 
 				if best_fitness==perfect_fitness: # if we have finished this .cnf file

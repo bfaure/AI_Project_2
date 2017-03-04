@@ -287,10 +287,12 @@ def get_next_generation(population,fitnesses,environment):
 def init_data_log(file):
 	file.write("File        Generations        Bit Flips          Time\n")
 	file.write("______________________________________________________\n\n")
+	file.flush()
 
 # logs the results after the population has suceeded in solving a .cnf file
 def log_data(file,cur_cnf,generation,bit_flips,time):
 	file.write(str(cur_cnf)+"\t"+str(generation)+"\t"+str(bit_flips)+"\t"+str(time)+"\n")
+	file.flush()
 
 # Takes in a data_t object and splits training into the different variable count .cnf files
 def train(data,var_types,population_size=10):
@@ -340,7 +342,7 @@ def train(data,var_types,population_size=10):
 				if highest_fitness>best_fitness: # save this as the best if higher than prev. best
 					best_fitness = highest_fitness
 
-				if environments.index(current_environment) % 3 == 0: print("                                                                          ",end="\r")
+				if environments.index(current_environment) % 4 == 0: print("                                                                          ",end="\r")
 				print(var_ct+": "+progress_string+" Generation = "+str(generation)+", Best Fitness = "+str(best_fitness)+", Perfect Fitness = "+str(perfect_fitness)+", Bit Flips = "+str(bit_flips),end="\r")
 				sys.stdout.flush()
 

@@ -16,13 +16,20 @@ from helpers import evaluate_fitness,choose_parent,flip_heuristic,mutate
 from helpers import get_child,get_two_best_individuals,get_next_generation
 from helpers import init_data_log,log_data,train 
 
+# used for checking efficiency using cProfile
+def profile():
+	d = data_t()
+	var_types = ["var_20"] 
+	train(d,var_types,population_size=10,logging=False)
+
+# regular execution
 def main():
 	# load data from all .cnf files
 	d = data_t() 
 	# the var counts to train on
 	var_types = ["var_20","var_50","var_75","var_100"] 
 	# train on the variables counts specified above
-	train(d,var_types,population_size=10) 
+	train(d,var_types) 
 
 if __name__ == '__main__':
 	main()

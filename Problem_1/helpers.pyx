@@ -127,12 +127,8 @@ def init_population(variable_count,population_size):
 # would evaluate the output of 1 AND 0 AND 1 (outputs False)
 def test_individual_on_clause(individual,clause):
 	for item in clause:
-		var_index = abs(item)-1 # index of the variable in the individual
-		result = individual[var_index] # get the item at said index
-		if item>0: # if not negated, need a 0 to prove False
-			if result==1: return True
-		else: # if negated, need a 1 to prove False
-			if result==0: return True
+		if item>0 and individual[abs(item)-1]==1: return True # need a 1 to prove success
+		if item<0 and individual[abs(item)-1]==0: return True # need a 0 to prove success
 	return False # True if never proven False
 
 # evaluates the fitness of 'individual' on all cnf_t instances in 'environments' list
@@ -167,6 +163,9 @@ def flip_heuristic(child,environment):
 		initial_fitness = evaluate_fitness(child,environment)
 		scanned = [False] * len(child)
 		orig_child = copy(child)
+
+		current_fitness = initial_fitness 
+
 		while True:
 			# check if we have already scanned all bits
 			scanned_all = True 
@@ -183,7 +182,7 @@ def flip_heuristic(child,environment):
 			# mark that we have scanned this bit
 			scanned[bit] = True 
 
-			current_fitness = evaluate_fitness(child,environment) # evaluate fitness before bit flip
+			#current_fitness = evaluate_fitness(child,environment) # evaluate fitness before bit flip
 			child[bit]=0 if child[bit]==1 else 1
 			bit_flips += 1
 			new_fitness = evaluate_fitness(child,environment) # evaluate new fitness
@@ -192,9 +191,12 @@ def flip_heuristic(child,environment):
 			if new_fitness<current_fitness: 
 				child[bit] = 0 if child[bit]==1 else 1
 				bit_flips += 1
+			# otherwise, leave the change and update the current fitness
+			else:
+				current_fitness = new_fitness
 
 		# check if this round of flip_heuristic has increased the fitness of the child
-		if evaluate_fitness(child,environment) > initial_fitness: continue
+		if current_fitness > initial_fitness: continue
 		
 		# if we get here then this round has not increased the fitness of the child
 		# so we should return the current state of the child
@@ -295,17 +297,17 @@ def log_data(file,cur_cnf,generation,bit_flips,time):
 	file.flush()
 
 # Takes in a data_t object and splits training into the different variable count .cnf files
-def train(data,var_types,population_size=10):
+def train(data,var_types,population_size=10,logging=True):
 
 	for var_ct in var_types:
 
-		data_log 	 	= open(var_ct+".txt","w")
-		environments 	= data.__dict__[var_ct] # all environments w/ same var count
-		perfect_fitness = environments[0].num_clauses # perfect fitness for this environment set
-		num_vars 		= environments[0].num_vars # number of vars in this environment set
+		if logging: data_log 	= open(var_ct+".txt","w")
+		environments 			= data.__dict__[var_ct] # all environments w/ same var count
+		perfect_fitness 		= environments[0].num_clauses # perfect fitness for this environment set
+		num_vars 				= environments[0].num_vars # number of vars in this environment set
 	
-		init_data_log(data_log) # add header to data log file	
-		var_start_time = time() # start for this set of .cnf files
+		if logging: 	init_data_log(data_log) # add header to data log file	
+		var_start_time 	= time() # start for this set of .cnf files
 
 		for current_environment in environments:
 
@@ -347,14 +349,14 @@ def train(data,var_types,population_size=10):
 				sys.stdout.flush()
 
 				if best_fitness==perfect_fitness: # if we have finished this .cnf file
-					log_data(data_log,cur_file,generation,bit_flips,time()-start_time) # log results to file
+					if logging: log_data(data_log,cur_file,generation,bit_flips,time()-start_time) # log results to file
 					break
 
 				pop,flips = get_next_generation(pop,fitnesses,current_environment)
 				bit_flips+=flips
 				generation+=1
 
-		data_log.close() # close the logging file
+		if logging: data_log.close() # close the logging file
 		print("                                                                                                                   ",end="\r")
 		print(var_ct+": Total time "+str(time()-var_start_time)[:6]+" seconds",end="\r")
 		print("\n",end="\r")

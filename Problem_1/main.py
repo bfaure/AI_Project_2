@@ -17,8 +17,12 @@ from helpers import get_child,get_two_best_individuals,get_next_generation
 from helpers import init_data_log,log_data,train 
 
 def main():
-	d = data_t() # load data from all .cnf files
-	train(d) # train on the 20 variable equations
+	# load data from all .cnf files
+	d = data_t() 
+	# the var counts to train on
+	var_types = ["var_20","var_50","var_75","var_100"] 
+	# train on the variables counts specified above
+	train(d,var_types,population_size=10) 
 
 if __name__ == '__main__':
 	main()

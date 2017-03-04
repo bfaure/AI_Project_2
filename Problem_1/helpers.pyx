@@ -126,27 +126,17 @@ def init_population(variable_count,population_size):
 # for example, if the clause input was [1,-2,3] and the individual was [1,1,1] then we
 # would evaluate the output of 1 AND 0 AND 1 (outputs False)
 def test_individual_on_clause(individual,clause):
-	#individual_str = ''.join(str(e) for e in individual)
-	#clause_str = ''.join(str(e)+" " for e in clause)
-	#log.write("Testing "+individual_str+" on clause "+clause_str+"\n")
-
 	for item in clause:
 		var_index = abs(item)-1 # index of the variable in the individual
 		result = individual[var_index] # get the item at said index
 		if item>0: # if not negated, need a 0 to prove False
-			if result==1: 
-				#log.write("FAILURE\n")
-				return True
+			if result==1: return True
 		else: # if negated, need a 1 to prove False
-			if result==0: 
-				#log.write("FAILURE\n")
-				return True
-	#log.write("SUCCESS\n")
+			if result==0: return True
 	return False # True if never proven False
 
 # evaluates the fitness of 'individual' on all cnf_t instances in 'environments' list
 def evaluate_fitness(individual,environment):
-
 	overall_fitness = 0
 	# iterate over all clauses in cnf_t environment
 	for clause in environment.clauses:
@@ -156,9 +146,6 @@ def evaluate_fitness(individual,environment):
 # choose a parent from the list of individuals based on the probabilities transferred over
 # from the list of fitnesses, using cumulative distribution function (cdf)
 def choose_parent(fitnesses):
-	#fitnesses_str = ''.join(str(e)+" " for e in fitnesses)
-	#log.write("Choosing parent from "+fitnesses_str+"\n")
-
 	def cdf(weights):
 		total = sum(weights)
 		result = []
@@ -171,23 +158,16 @@ def choose_parent(fitnesses):
 	cdf_vals = cdf(fitnesses)
 	x = random.random()
 	idx = bisect.bisect(cdf_vals,x)
-
-	#log.write("Chose index = "+str(idx)+"\n")
 	return idx
 
 # applies the flip heuristic
 def flip_heuristic(child,environment):
 	bit_flips = 0
-
 	while True:
-
 		initial_fitness = evaluate_fitness(child,environment)
 		scanned = [False] * len(child)
 		orig_child = copy(child)
-
 		while True:
-			#random.seed() # re-seed the random function
-			
 			# check if we have already scanned all bits
 			scanned_all = True 
 			for did_scan in scanned:
@@ -214,13 +194,11 @@ def flip_heuristic(child,environment):
 				bit_flips += 1
 
 		# check if this round of flip_heuristic has increased the fitness of the child
-		if evaluate_fitness(child,environment) > initial_fitness: 
-			continue
+		if evaluate_fitness(child,environment) > initial_fitness: continue
 		
 		# if we get here then this round has not increased the fitness of the child
 		# so we should return the current state of the child
-		else:
-			return orig_child,bit_flips
+		else: return orig_child,bit_flips
 
 # applies the mutation to a single individual, returns mutated version
 def mutate(individual):
@@ -230,13 +208,10 @@ def mutate(individual):
 	for item in individual:
 		if bool(random.getrandbits(1))==True: # flip the bit
 			bit_flips+=1
-			
 			if item==0: new_individual.append(1)
 			else: new_individual.append(0)
-		
 		else:
 			new_individual.append(item)
-
 	return new_individual,bit_flips
 
 # Returns the child of parents p1 and p2
@@ -318,9 +293,7 @@ def log_data(file,cur_cnf,generation,bit_flips,time):
 	file.write(str(cur_cnf)+"\t"+str(generation)+"\t"+str(bit_flips)+"\t"+str(time)+"\n")
 
 # Takes in a data_t object and splits training into the different variable count .cnf files
-def train(data):
-	var_types 		= ["var_20","var_50","var_75","var_100"]
-	population_size = 10 # number of individuals
+def train(data,var_types,population_size=10):
 
 	for var_ct in var_types:
 

@@ -233,7 +233,7 @@ def mutate(individual):
 			new_individual.append(item)
 	return new_individual
 
-def get_child(p1,p2):
+def get_child(p1,p2,environment):
 	child = []
 	for p1_trait,p2_trait in zip(p1,p2):
 		if bool(random.getrandbits(1))==True: child.append(p1_trait)
@@ -241,44 +241,43 @@ def get_child(p1,p2):
 	# mutation stage
 	should_mutate = random.randint(1,10)
 	if should_mutate!=10: child = mutate(child)
-	return flip_heuristic(child)
+	return flip_heuristic(child,environment)
 
-# assembles the next generation based on the results of testing in the prior
-def get_next_generation(individuals,fitnesses,environment):
-	new_population = []
-
+def get_two_best_individuals(fitnesses):
+	# calculate the two best individuals
 	best_value = -1
 	second_best_value = -1
 	best_index = -1
 	second_best_index = -1
-
-	# calculate the two best individuals
 	for i in range(len(fitnesses)):
-
 		if fitnesses[i]>best_value:
 			best_value = fitnesses[i]
 			best_index = i 
-			continue 
-		if fitnesses[i]>second_best_value:
+		elif fitnesses[i]>second_best_value:
 			second_best_value = fitnesses[i]
 			second_best_index = i 
+	return best_index,second_best_index
+
+# assembles the next generation based on the results of testing in the prior
+def get_next_generation(population,fitnesses,environment):
+	# to hold the new popuation
+	new_population = [] 
+
+	# get the indices of the two best individuals in the population
+	best,runner_up = get_two_best_individuals(fitnesses)
 
 	# append the two best individuals onto the next generation
-	new_population.append(individuals[best_index])
-	new_population.append(individuals[second_best_index])
+	new_population.append(population[best])
+	new_population.append(population[runner_up])
 
-	pop_size = len(individuals)
-
-	fitnesses = normalize_fitnesses(fitnesses)
-
-	while len(new_population)<pop_size:
+	while len(new_population)<len(population):
 
 		# probabilistic selection
-		p1 = individuals[choose_parent(fitnesses)]
-		p2 = individuals[choose_parent(fitnesses)]
+		p1 = population[choose_parent(fitnesses)]
+		p2 = population[choose_parent(fitnesses)]
 
 		# Uniform crossover reproduction, mutation, and flip heuristic
-		child = get_child(p1,p2)
+		child = get_child(p1,p2,environment)
 
 		# add new child to new population
 		new_population.append(child)

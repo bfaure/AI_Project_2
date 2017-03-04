@@ -330,6 +330,7 @@ def train(data):
 		num_vars 		= environments[0].num_vars # number of vars in this environment set
 	
 		init_data_log(data_log) # add header to data log file	
+		var_start_time = time() # start for this set of .cnf files
 
 		for current_environment in environments:
 
@@ -367,7 +368,7 @@ def train(data):
 					best_fitness = highest_fitness
 
 				if environments.index(current_environment) % 3 == 0: print("                                                                          ",end="\r")
-				print(progress_string+" Generation = "+str(generation)+", Best Fitness = "+str(best_fitness)+", Perfect Fitness = "+str(perfect_fitness)+", Bit Flips = "+str(bit_flips),end="\r")
+				print(var_ct+": "+progress_string+" Generation = "+str(generation)+", Best Fitness = "+str(best_fitness)+", Perfect Fitness = "+str(perfect_fitness)+", Bit Flips = "+str(bit_flips),end="\r")
 				sys.stdout.flush()
 
 				if best_fitness==perfect_fitness: # if we have finished this .cnf file
@@ -379,4 +380,6 @@ def train(data):
 				generation+=1
 
 		data_log.close() # close the logging file
+		print("                                                                                                                   ",end="\r")
+		print(var_ct+": Total time "+str(time()-var_start_time)[:6]+" seconds",end="\r")
 		print("\n",end="\r")

@@ -2,6 +2,8 @@ from __future__ import print_function # to allow for \r
 import os
 import sys
 import random
+import bisect
+from copy import copy
 
 # class to hold all all information required about a .cnf file
 class cnf_t(object):
@@ -140,6 +142,122 @@ def evaluate_fitness(individual,environments):
 				overall_fitness+=1
 	return overall_fitness
 
+# choose a parent from the list of individuals based on the probabilities transferred over
+# from the list of fitnesses, using cumulative distribution function (cdf)
+def choose_parent(fitnesses):
+	def cdf(weights):
+		total = sum(weights)
+		result = []
+		cumsum = 0
+		for w in weights:
+			cumsum += float(w)
+			result.append(cumsum/total)
+		return result
+
+	cdf_vals = cdf(fitnesses)
+	x = random.uniform(0,1)
+	idx = bisect.bisect(cdf_vals,x)
+	return idx
+
+# applies the flip heuristic
+def flip_heuristic(child,environments):
+	
+	while True:
+
+		initial_fitness = evaluate_fitness(child,environments)
+		scanned = [False] * len(child)
+
+		while True:
+			random.seed() # re-seed the random function
+
+			current_fitness = evaluate_fitness(child,environments)
+			
+			# check if we have already scanned all bits
+			scanned_all = True 
+			for did_scan in scanned:
+				if did_scan==False:
+					scanned_all = False 
+					break
+			if scanned_all: break
+
+			while True: # find a bit to scan that we haven't checked yet
+				bit = random.randint(0,len(child)-1)
+				if scanned[bit]==False: break
+
+			# mark that we have scanned this bit
+			scanned[bit] = True 
+
+			child[bit] = 0 if child[bit]==1 else 0 # flip the bit 
+			new_fitness = evaluate_fitness(child,environments) # evaluate new fitness
+			
+			# if this has not increased our fitness, re-flip back to original
+			if new_fitness<current_fitness: child[bit] = 0 if child[bit]==1 else 0
+
+		# check if this round of flip_heuristic has increased the fitness of the child
+		if evaluate_fitness(child,environments) > initial_fitness: continue
+
+		# if we get here then this round has not increased the fitness of the child
+		# so we should return the current state of the child
+		return child 
+
+def normalize(fitnesses):
+	new_fitnesses = []
+	total_fitness = sum(fitnesses)
+	for item in fitnesses:
+		new_fitnesses.append(float(item)/float(total_fitness))
+	return new_fitnesses
+
+# assembles the next generation based on the results of testing in the prior
+def get_next_generation(individuals,fitnesses,environments):
+	new_population = []
+
+	best_value = -1
+	second_best_value = -1
+	best_index = -1
+	second_best_index = -1
+
+	# calculate the two best individuals
+	for i in range(len(fitnesses)):
+		if fitnesses[i]>best_value:
+			best_value = fitnesses[i]
+			best_index = i 
+			continue 
+		if fitnesses[i]>second_best_value:
+			second_best_value = fitnesses[i]
+			second_best_index = i 
+
+	# append the two best individuals onto the next generation
+	new_population.append(individuals[best_index])
+	new_population.append(individuals[second_best_index])
+
+	pop_size = len(individuals)
+
+	while len(new_population)<pop_size:
+		p1 = individuals[choose_parent(fitnesses)]
+		p2 = individuals[choose_parent(fitnesses)]
+
+		child = [] # new child of p1 and p2
+
+		# reproduction stage
+		for p1_trait,p2_trait in list(zip(p1,p2)):
+			if bool(random.getrandbits(1))==True: child.append(p1_trait)
+			else: child.append(p2_trait)
+
+		# mutation stage
+		for i in range(len(child)):
+			should_mutate = random.randint(1,10)
+			if should_mutate!=10: # 0.9 probability
+				# with 0.5 probability, flip the child trait bit
+				if bool(random.getrandbits(1))==True: child[i] = 0 if child[i]==1 else 1
+
+		# apply the flip heuristic
+		child = flip_heuristic(child,environments)
+
+		# add new child to new population
+		new_population.append(child)
+
+	return new_population
+
 # Takes in a list of cnf_t objects (all must have the same number of variables)
 def train(environments):
 	print("Training...")
@@ -148,7 +266,7 @@ def train(environments):
 	num_clauses 	= environments[0].num_clauses 
 	population_size = 10
 
-	perfect_fitness = num_clauses * len(environments)
+	perfect_fitness = num_clauses*len(environments)
 	print("Perfect fitness: "+str(perfect_fitness))
 
 	best_fitness = -1 # to hold the best fitness found on each generation
@@ -159,34 +277,28 @@ def train(environments):
 	generation = 0 # current generation number
 
 	while best_fitness<perfect_fitness:
-
-		elite 		= [] # to hold to 2 best individuals
 		fitnesses 	= [] # to hold the evaluated fitness for each individual
 
-		highest_fitness 					= -1
-		highest_fitness_individual_index 	= -1
-
-		second_highest_fitness 					= -1
-		second_highest_fitness_individual_index = -1
+		highest_fitness = -1
 
 		for individual in pop: # evaluate fitness for each individual
 			fitness = evaluate_fitness(individual,environments)
-
+			fitnesses.append(fitness)
 			if fitness > highest_fitness:
-				highest_fitness = fitness 
-				highest_fitness_individual_index = pop.index(individual)
-				continue
+				highest_fitness = fitness
 
-			if fitness > second_highest_fitness:
-				second_highest_fitness = fitness 
-				highest_fitness_individual_index = pop.index(individual)
-				continue
+		if highest_fitness>best_fitness:
+			best_fitness = highest_fitness
 
-		print("Generation "+str(generation)+": Best Fitness = "+str(highest_fitness),end="\r")
-		best_fitness = highest_fitness
+		print("gen "+str(generation)+", highest = "+str(highest_fitness)+", overall best = "+str(best_fitness))
+		
+		if best_fitness==perfect_fitness:
+			break
+
+		pop = get_next_generation(pop,fitnesses,environments)
+
 		generation+=1
-
-		if generation>10:
+		if generation>1000:
 			break
 
 	print("\n",end="\r")

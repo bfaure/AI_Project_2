@@ -204,7 +204,8 @@ def flip_heuristic(child,environment):
 			scanned[bit] = True 
 
 			current_fitness = evaluate_fitness(child,environment) # evaluate fitness before bit flip
-			child[bit] = 0 if child[bit]==1 else 1 # flip the bit 
+			if child[bit]==1: child[bit]=0
+			else: child[bit]=1
 			new_fitness = evaluate_fitness(child,environment) # evaluate new fitness
 			
 			# if this has not increased our fitness, re-flip back to original
@@ -323,6 +324,7 @@ def train(environments):
 			average_fitness = sum(fitnesses) / len(fitnesses)
 
 			print("gen "+str(generation)+", highest = "+str(highest_fitness)+", avg = "+str(average_fitness)+", overall best = "+str(best_fitness),end="\r")
+			sys.stdout.flush()
 			
 			if best_fitness==perfect_fitness: break
 

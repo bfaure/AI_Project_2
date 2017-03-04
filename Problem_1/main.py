@@ -240,8 +240,8 @@ def get_child(p1,p2):
 		else: child.append(p2_trait)
 	# mutation stage
 	should_mutate = random.randint(1,10)
-	if should_mutate!=10: return mutate(child)
-	else: return child
+	if should_mutate!=10: child = mutate(child)
+	return flip_heuristic(child)
 
 # assembles the next generation based on the results of testing in the prior
 def get_next_generation(individuals,fitnesses,environment):
@@ -277,11 +277,8 @@ def get_next_generation(individuals,fitnesses,environment):
 		p1 = individuals[choose_parent(fitnesses)]
 		p2 = individuals[choose_parent(fitnesses)]
 
-		# Uniform crossover reproduction
+		# Uniform crossover reproduction, mutation, and flip heuristic
 		child = get_child(p1,p2)
-
-		# apply the flip heuristic
-		child = flip_heuristic(child,environment)
 
 		# add new child to new population
 		new_population.append(child)
@@ -325,7 +322,7 @@ def train(environments):
 
 			print("gen "+str(generation)+", highest = "+str(highest_fitness)+", avg = "+str(average_fitness)+", overall best = "+str(best_fitness),end="\r")
 			sys.stdout.flush()
-			
+
 			if best_fitness==perfect_fitness: break
 
 			pop = get_next_generation(pop,fitnesses,current_environment)

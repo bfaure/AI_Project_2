@@ -2,7 +2,7 @@ from __future__ import print_function
 import os
 import sys
 import random
-from math import sqrt
+from math import sqrt, exp
 from copy import copy, deepcopy
 import heapq
 
@@ -58,7 +58,21 @@ def min_distance_unvisited(startLocation, cityList, visited):
     return minValue
 
 
+def total_cost_astar(citylist, order):
+    tour = [None]*len(citylist)
+    for i in range(0, len(order)):
+        tour[order[i]-1] = citylist[i]
 
+    return total_cost(tour)
+
+def total_cost(tour):
+    distance = 0
+    for i in range(0, len(tour)):
+        if i == len(tour)-1:
+            distance = distance + cost_calculation(tour[i], tour[0])
+        else:
+            distance = distance + cost_calculation(tour[i], tour[i+1])
+    return distance
 
 def tsp_astar(citylist):
     #boolean array of visited locations
@@ -83,6 +97,55 @@ def tsp_astar(citylist):
         numVisited = numVisited + 1
     return visited
 
+def computeProbability(currentEnergy, newEnergy, temperature):
+    if newEnergy < currentEnergy:
+        return 1.0
+    else:
+        return exp((currentEnergy - newEnergy) / temperature)
+
+def tsp_sa(citylist):
+    #set temperature
+    temperature = 10000
+    #set cooling rate
+    coolingRate = 0.003
+
+    #current solution
+    currentTour = deepcopy(citylist)
+
+    bestSolution = deepcopy(citylist)
+    while temperature > 1:
+        #new tour
+        newTour = deepcopy(currentTour)
+
+        #Get random index positions
+        position1 = random.randint(0, len(citylist)-1)
+        position2 = random.randint(0, len(citylist)-1)
+
+        #swap the cities at these positions
+        temp = newTour[position1]
+        newTour[position1] = newTour[position2]
+        newTour[position2] = temp
+
+        #get the cost for each solution
+        currentCost = total_cost(currentTour)
+        newCost = total_cost(newTour)
+
+        #Decide whether to accept solution
+        if computeProbability(currentCost, newCost, temperature) > random.random():
+            currentTour = deepcopy(newTour)
+
+        #Update the best solution
+        if currentCost < total_cost(bestSolution):
+            bestSolution = deepcopy(currentTour)
+
+        #cool the system down
+        temperature *= 1 - coolingRate
+    #print coordinates
+    for stop in bestSolution:
+        print(str(stop.x)+" "+str(stop.y))
+    print(total_cost(bestSolution))
+
+
 class city(object):
     def __init__(self, city_id, x_coord, y_coord):
         self.cityid = int(city_id)
@@ -96,8 +159,8 @@ def main():
     generateFile(10, "test.txt")
     cityList = readFile("test.txt")
     order = tsp_astar(cityList)
-    print(order)
-
+    print(total_cost_astar(cityList, order))
+    tsp_sa(cityList)
 
 if __name__ == '__main__':
 	main()

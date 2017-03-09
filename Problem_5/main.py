@@ -7,6 +7,19 @@ from copy import copy, deepcopy
 import heapq
 
 
+def generateAllFiles():
+    num_cities_list = [10, 25, 50, 100]
+
+    #make directory to hold files containing input data
+    if not os.path.exists("data"):
+        os.makedirs("data")
+
+    for i in range(0, len(num_cities_list)):
+        for j in range(0, 25):
+            filename = "data/"+str(+num_cities_list[i])+"_cities_Trial_"+str(j)
+            generateFile(num_cities_list[i], filename)
+
+
 def generateFile(numCities, name):
     target = open(name, "w")
     target.write(str(numCities)+"\n")
@@ -156,11 +169,12 @@ class city(object):
 
 def main():
     #generate file here
-    generateFile(10, "test.txt")
-    cityList = readFile("test.txt")
-    order = tsp_astar(cityList)
-    print(total_cost_astar(cityList, order))
-    tsp_sa(cityList)
+    #generateFile(10, "test.txt")
+    #cityList = readFile("test.txt")
+    #order = tsp_astar(cityList)
+    #print(total_cost_astar(cityList, order))
+    #tsp_sa(cityList)
+    generateAllFiles()
 
 if __name__ == '__main__':
 	main()

@@ -147,9 +147,14 @@ def tsp_sa(citylist):
 
     #current solution
     currentTour = deepcopy(citylist)
+    solved = False
 
     bestSolution = deepcopy(citylist)
-    while temperature > 1:
+    #number of nodes generated
+    nodes_generated = 0
+    timeout = time.time() + 60*10 #10 minute timeout
+    start = time.time()
+    while temperature > 1 and time.time() < timeout:
         #new tour
         newTour = deepcopy(currentTour)
 
@@ -161,6 +166,7 @@ def tsp_sa(citylist):
         temp = newTour[position1]
         newTour[position1] = newTour[position2]
         newTour[position2] = temp
+        nodes_generated = nodes_generated + 1
 
         #get the cost for each solution
         currentCost = total_cost(currentTour)
@@ -176,10 +182,13 @@ def tsp_sa(citylist):
 
         #cool the system down
         temperature *= 1 - coolingRate
-    #print coordinates
-    for stop in bestSolution:
-        print(str(stop.x)+" "+str(stop.y))
-    print(total_cost(bestSolution))
+    end = time.time()
+    execution_time = end-start
+
+    if temperature < 1:
+        solved = True #We've found the most optimal solution that we can get
+
+    return bestSolution, solved, execution_time, nodes_generated
 
 
 class city(object):
@@ -257,6 +266,80 @@ def run_tsp_astar_trials():
     target.close()
     print("Done!")
 
+def run_tsp_sa_trials():
+    file_list = os.listdir("data/")
+    #arrange the files in the order they are listed in the directory
+    file_list = sorted(file_list, key=numericalSort)
+
+    #make lists for all the data we need to gather
+    solution_times_raw = []
+    problems_solved_raw = []
+    cost_raw = []
+    nodes_generated = []
+    problem_sizes = [10, 25, 50, 100]
+
+    for f in file_list:
+        cityList = readFile("data/"+f)
+        tour, solved, execution_time, num_generated = tsp_sa(cityList)
+
+        cost_raw.append(total_cost(tour))
+        problems_solved_raw.append(solved)
+        solution_times_raw.append(execution_time)
+        nodes_generated.append(num_generated)
+        print("Finished trial with: "+f)
+
+    print("Finished all trials! Writing to file...")
+
+    #Filter out values for the solutions
+    solution_times_filtered = []
+    cost_filtered = []
+    problems_solved = 0
+    for i in range(0,100):
+        if problems_solved_raw[i] == True:
+            problems_solved = problems_solved + 1
+            cost_filtered.append((cost_raw[i], problem_sizes[i/25], i%25))
+            solution_times_filtered.append((solution_times_raw[i], problem_sizes[i/25], i%25))
+
+    target = open("tsp_sa_results.txt", "w")
+    target.write("Number of problems solved: "+str(problems_solved)+"\n")
+
+    sum_cost = 0
+    for cost in cost_filtered:
+        sum_cost = sum_cost + cost[0]
+    average_solution_cost = sum_cost / len(cost_filtered)
+    target.write("Average solution cost (across 100 trials): "+str(average_solution_cost)+"\n")
+
+    sum_solution_time = 0
+    for sol in solution_times_filtered:
+        sum_solution_time = sum_solution_time + sol[0]
+    average_solution_time = sum_solution_time / len(solution_times_filtered)
+    target.write("Average solution time: "+str(average_solution_time)+"\n\n")
+
+    #Write lists to file
+    target.write("Solution cost list (cost, problemsize, trial number)\n")
+    target.write("----------------------------\n")
+    for t in cost_filtered:
+        target.write(' '.join(str(s) for s in t) + '\n')
+    target.write("\n\n")
+
+    target.write("Solution times list (time, problemsize, trial number)\n")
+    target.write("----------------------------\n")
+    for t in solution_times_filtered:
+        target.write(' '.join(str(s) for s in t) + '\n')
+    target.write("\n\n")
+
+    target.write("Nodes generated list")
+    target.write("----------------------------\n")
+    for i in range(0,100):
+        target.write("Size: "+str(problem_sizes[i/25])+" Trial: "+str(i%25)+" Generated: "+str(nodes_generated[i])+"\n")
+
+    target.close()
+    print("Done!")
+
+
+
+
+
 def main():
     #generate file here
     #generateFile(10, "test.txt")
@@ -265,7 +348,9 @@ def main():
     #print(total_cost_astar(cityList, order))
     #tsp_sa(cityList)
     #generateAllFiles()
-    run_tsp_astar_trials()
+    #run_tsp_astar_trials()
+
+    run_tsp_sa_trials()
 
 if __name__ == '__main__':
 	main()
